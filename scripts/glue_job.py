@@ -14,8 +14,8 @@ job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
 # Set input and output paths
-input_path = "s3://yelpdatasetsanthosh/yelp_data/"
-output_path = "s3://yelpdatasetsanthosh/yelp_data_final/"
+input_path = "s3://finalyelp/yelp/yelpdata.csv"
+output_path = "s3://finalyelp/yelpgit/"
 
 # Read the already transformed data (assumed CSV with header)
 df = spark.read.option("header", True).csv(input_path)
