@@ -1,20 +1,18 @@
+import sys
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
 
-# Initialize contexts
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
-job.init("final", {})  # 'final' is the job name
+job.init("yelp-data-processing", {})
 
-# Read cleaned CSV from S3
-input_path = "s3://finalyelp/finalyelpdata/yelp.csv"
-df = spark.read.option("header", "true").csv(input_path)
+# Read CSV from S3
+df = spark.read.option("header", "true").csv("s3://finalyelp/finalyelpdata/yelp.csv")
 
-# Coalesce to single file and write to output
-output_path = "s3://yelpdatasetsanthosh/yelp_data/"
-df.coalesce(1).write.mode("overwrite").option("header", "true").csv(output_path)
+# Write as a single CSV file
+df.coalesce(1).write.mode("overwrite").option("header", "true").csv("s3://yelpdatasetsanthosh/yelp_data/")
 
 job.commit()
