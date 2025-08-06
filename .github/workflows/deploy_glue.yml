@@ -1,5 +1,5 @@
 name: Deploy Glue Job
-#1
+
 on:
   push:
     paths:
@@ -40,7 +40,6 @@ jobs:
       run: |
         JOB_RUN_ID=${{ steps.start_job.outputs.job_run_id }}
         echo "Waiting for Glue Job ($JOB_RUN_ID) to finish..."
-
         while true; do
           STATUS=$(aws glue get-job-run --job-name yelpdata --run-id $JOB_RUN_ID --query 'JobRun.JobRunState' --output text)
           echo "Current Status: $STATUS"
@@ -52,4 +51,22 @@ jobs:
             exit 1
           fi
           sleep 30
+        done
+
+    - name: Start Glue Crawler
+      run: |
+        echo "Starting Glue Crawler..."
+        aws glue start-crawler --name yelpcrawlers
+
+    - name: Wait for Crawler to finish
+      run: |
+        echo "Waiting for Glue Crawler to finish..."
+        while true; do
+          STATE=$(aws glue get-crawler --name yelpcrawlers --query 'Crawler.State' --output text)
+          echo "Current Crawler State: $STATE"
+          if [[ "$STATE" == "READY" ]]; then
+            echo "Crawler completed successfully!"
+            break
+          fi
+          sleep 15
         done
