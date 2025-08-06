@@ -80,7 +80,7 @@ final_df = final_df.withColumn("year", year("r_date"))\
 # Output path (your own S3)
 from datetime import datetime
 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-output_path = f"s3://finalyelp/yelpraw/{timestamp}/"
+output_path = f"s3://finalyelp2012310/yelpraw/{timestamp}/"
 
 
 if not output_path.strip():
