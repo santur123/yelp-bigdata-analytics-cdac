@@ -4,7 +4,7 @@ from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
-from pyspark.sql.functions import udf, year, month
+from pyspark.sql.functions import udf, year, month, when, col
 from pyspark.sql.types import StringType
 
 # @params: [JOB_NAME]
@@ -16,19 +16,19 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
-# Load public data from S3 (replace with actual public paths if different)
-b_df = spark.read.parquet("s3://public-yelp-dataset/business/")
-r_df = spark.read.parquet("s3://public-yelp-dataset/review/")
-u_df = spark.read.parquet("s3://public-yelp-dataset/user/")
+# Load public data from S3
+b_df = spark.read.parquet("s3://yelp-project123/Parquet_data/business/")
+r_df = spark.read.parquet("s3://yelp-project123/Parquet_data/review/")
+u_df = spark.read.parquet("s3://yelp-project123/Parquet_data/user/")
 
 # Rename columns
-b_df = b_df.withColumnRenamed("name", "b_name")\
-           .withColumnRenamed("stars", "b_stars")\
+b_df = b_df.withColumnRenamed("name", "b_name") \
+           .withColumnRenamed("stars", "b_stars") \
            .withColumnRenamed("review_count", "b_review_count")
 
-r_df = r_df.withColumnRenamed("cool", "r_cool")\
-           .withColumnRenamed("date", "r_date")\
-           .withColumnRenamed("useful", "r_useful")\
+r_df = r_df.withColumnRenamed("cool", "r_cool") \
+           .withColumnRenamed("date", "r_date") \
+           .withColumnRenamed("useful", "r_useful") \
            .withColumnRenamed("funny", "r_funny")
 
 # Join datasets
@@ -73,20 +73,53 @@ map_super_category_udf = udf(map_super_category, StringType())
 final_df = final_df.withColumn("super_category", map_super_category_udf(final_df["categories"]))
 
 # Extract year & month, drop unused columns
-final_df = final_df.withColumn("year", year("r_date"))\
-                   .withColumn("month", month("r_date"))\
+final_df = final_df.withColumn("year", year("r_date")) \
+                   .withColumn("month", month("r_date")) \
                    .drop("r_date", "categories")
 
-# Output path (your own S3)
-from datetime import datetime
-timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-output_path = f"s3://finalyelp2012310/yelpraw/{timestamp}/"
+# ---- NEW: Show distinct states ----
+distinct_states = final_df.select("state").distinct()
+distinct_states.show(distinct_states.count(), truncate=False)
 
+# ---- NEW: Map state abbreviations to full names ----
+final_df = final_df.withColumn(
+    "state",
+    when(col("state") == "DE", "Delaware")
+    .when(col("state") == "MO", "Missouri")
+    .when(col("state") == "VI", "Virgin Islands")
+    .when(col("state") == "IL", "Illinois")
+    .when(col("state") == "SD", "South Dakota")
+    .when(col("state") == "UT", "Utah")
+    .when(col("state") == "HI", "Hawaii")
+    .when(col("state") == "CA", "California")
+    .when(col("state") == "NC", "North Carolina")
+    .when(col("state") == "AZ", "Arizona")
+    .when(col("state") == "LA", "Louisiana")
+    .when(col("state") == "NJ", "New Jersey")
+    .when(col("state") == "MT", "Montana")
+    .when(col("state") == "FL", "Florida")
+    .when(col("state") == "MI", "Michigan")
+    .when(col("state") == "NV", "Nevada")
+    .when(col("state") == "ID", "Idaho")
+    .when(col("state") == "VT", "Vermont")
+    .when(col("state") == "WA", "Washington")
+    .when(col("state") == "IN", "Indiana")
+    .when(col("state") == "TN", "Tennessee")
+    .when(col("state") == "TX", "Texas")
+    .when(col("state") == "CO", "Colorado")
+    .when(col("state") == "PA", "Pennsylvania")
+    .when(col("state") == "AB", "Alberta")
+    .when(col("state") == "MA", "Massachusetts")
+    .when(col("state") == "Unknown", "Mississippi")  # Placeholder for 'XMS'
+    .otherwise(col("state"))
+)
 
+# Output path
+output_path = "s3://data20031203/cleaned_data/"
 if not output_path.strip():
     raise ValueError("Output path cannot be empty.")
 
-# Write to S3
+# Write the DataFrame to the corrected S3 path
 final_df.coalesce(1) \
        .write \
        .mode("overwrite") \
