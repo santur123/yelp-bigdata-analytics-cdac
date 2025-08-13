@@ -115,7 +115,7 @@ final_df = final_df.withColumn(
 )
 
 # Output path
-output_path = "s3://data20031203/cleaned_data/"
+output_path = "s3://finalyelp/yelpraw/"
 if not output_path.strip():
     raise ValueError("Output path cannot be empty.")
 
